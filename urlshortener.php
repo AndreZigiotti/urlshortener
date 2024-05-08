@@ -73,6 +73,38 @@ add_action('add_meta_boxes', 'shorturl_exibe_itens_encurtador');
 function shorturl_exibe_info($post)
 {
   //print_r($post);
+  $curl = curl_init();
+
+  // curl_setopt_array($curl, array(
+  //   CURLOPT_URL => 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/list',
+  //   CURLOPT_RETURNTRANSFER => true,
+  //   CURLOPT_ENCODING => '',
+  //   CURLOPT_MAXREDIRS => 10,
+  //   CURLOPT_TIMEOUT => 0,
+  //   CURLOPT_FOLLOWLOCATION => true,
+  //   CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  //   CURLOPT_CUSTOMREQUEST => 'GET',
+  //   CURLOPT_HEADER => true,
+  //   CURLOPT_HTTPHEADER => array(
+  //     'X-Auth-Email: gabriel@ingagedigital.com.br',
+  //     'X-Auth-Key: e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
+  //     'Content-Type: application/json',
+  //     'Authorization: Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
+  //   ),
+  // ));
+
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($curl, CURLOPT_URL, 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/list');
+
+  $response = curl_exec($curl);
+  $data = json_decode($response, true);
+  //var_dump($data);
+  echo '<pre>';
+  print_r($data);
+  echo '</pre>';
+  curl_close($curl);
+
+
   $clicks_counter = get_post_meta($post->ID, 'clicks_counter', true);
   if ($clicks_counter == '') {
     $clicks_counter = 0;
@@ -147,29 +179,68 @@ function shorturl_redirect($template)
 }
 
 
+// function send_to_worker($post_id)
+// {
+//   $urlDestino = get_field('url_destino', $post_id);
+//   $custom_url = get_field('custom_url', $post_id);
+//   $activation_date = get_field('data_inicial', $post_id);
+//   $expiration_date = get_field('data_final', $post_id);
+
+//   $body = [
+//     'url' => $urlDestino,
+//     'activation' => $activation_date,
+//     'expiration' => $expiration_date,
+//     'clicks' => 0,  // inicializa a contagem de cliques
+//     'referrer' => []  // inicializa os referrers
+//   ];
+
+//   $response = wp_remote_post("https://url-shortener-wordpress-sensia.ingage.workers.dev/api/shorten/", [
+//     'body' => json_encode($body),
+//     'headers' => ['Content-Type' => 'application/json']
+//   ]);
+
+//   if (is_wp_error($response)) {
+//     error_log('Failed to send data to Cloudflare Worker: ' . $response->get_error_message());
+//   }
+// }
+
 function send_to_worker($post_id)
 {
-  $urlDestino = get_field('url_destino', $post_id);
-  $custom_url = get_field('custom_url', $post_id);
-  $activation_date = get_field('data_inicial', $post_id);
-  $expiration_date = get_field('data_final', $post_id);
+  $curl = curl_init();
 
-  $body = [
-    'url' => $urlDestino,
-    'activation' => $activation_date,
-    'expiration' => $expiration_date,
-    'clicks' => 0,  // inicializa a contagem de cliques
-    'referrer' => []  // inicializa os referrers
+  $dadosJS = [
+    'expirationTime' => '',
+    'requirePassword' => false,
+    'password' => '',
+    'shortUrlLength' => 8,
+    'longUrl' => 'url:' . get_field('url_destino', $post_id),
+    'shortUrl' => 'url:' . get_field('custom_url', $post_id),
+    //clicks: 0,
   ];
 
-  $response = wp_remote_post("https://your-worker.cloudflareworkers.com/api/shorten/$custom_url", [
-    'body' => json_encode($body),
-    'headers' => ['Content-Type' => 'application/json']
-  ]);
+  curl_setopt_array($curl, array(
+    CURLOPT_URL => 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/shorten',
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_ENCODING => '',
+    CURLOPT_MAXREDIRS => 10,
+    CURLOPT_TIMEOUT => 0,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    CURLOPT_CUSTOMREQUEST => 'PUT',
+    CURLOPT_POSTFIELDS => json_encode($dadosJS),
+    CURLOPT_HEADER => true,
+    CURLOPT_HTTPHEADER => array(
+      'X-Auth-Email: gabriel@ingagedigital.com.br',
+      'X-Auth-Key: e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
+      'Content-Type: text/plain',
+      'Authorization: Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
+    ),
+  ));
 
-  if (is_wp_error($response)) {
-    error_log('Failed to send data to Cloudflare Worker: ' . $response->get_error_message());
-  }
+  $response = curl_exec($curl);
+
+  curl_close($curl);
+  error_log($response);
 }
 
 add_action('acf/save_post', 'send_to_worker', 20); // Utiliza uma prioridade para garantir que seja executado após os dados serem salvos pelo ACF.
