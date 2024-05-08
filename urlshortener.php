@@ -75,24 +75,6 @@ function shorturl_exibe_info($post)
   //print_r($post);
   $curl = curl_init();
 
-  // curl_setopt_array($curl, array(
-  //   CURLOPT_URL => 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/list',
-  //   CURLOPT_RETURNTRANSFER => true,
-  //   CURLOPT_ENCODING => '',
-  //   CURLOPT_MAXREDIRS => 10,
-  //   CURLOPT_TIMEOUT => 0,
-  //   CURLOPT_FOLLOWLOCATION => true,
-  //   CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-  //   CURLOPT_CUSTOMREQUEST => 'GET',
-  //   CURLOPT_HEADER => true,
-  //   CURLOPT_HTTPHEADER => array(
-  //     'X-Auth-Email: gabriel@ingagedigital.com.br',
-  //     'X-Auth-Key: e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
-  //     'Content-Type: application/json',
-  //     'Authorization: Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
-  //   ),
-  // ));
-
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($curl, CURLOPT_URL, 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/list');
 
@@ -213,8 +195,8 @@ function send_to_worker($post_id)
     'requirePassword' => false,
     'password' => '',
     'shortUrlLength' => 8,
-    'longUrl' => 'url:' . get_field('url_destino', $post_id),
-    'shortUrl' => 'url:' . get_field('custom_url', $post_id),
+    'longUrl' => get_field('url_destino', $post_id),
+    'shortUrl' => get_field('custom_url', $post_id),
     //clicks: 0,
   ];
 
