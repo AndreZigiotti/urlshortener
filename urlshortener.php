@@ -72,8 +72,6 @@ add_action('add_meta_boxes', 'shorturl_exibe_itens_encurtador');
 
 function shorturl_exibe_info($post) {
   $data = get_permalink($post->ID);
-  // 
-  // var_dump();
 
   /**
    * @TODO - Alterar a url do worker para uma variável de ambiente.
@@ -86,7 +84,7 @@ function shorturl_exibe_info($post) {
     ),
     'body' => wp_json_encode(
       array(
-        'registerKey' => get_field('custom_url', $post->ID) // Path do post do qual as informações serão recuperadas.
+        'registerKey' => get_field('custom_url', $post->ID) // Custom url do post do qual as informações serão recuperadas.
       )
     ),
     'cookies' => array()
