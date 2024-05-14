@@ -70,48 +70,38 @@ function shorturl_exibe_itens_encurtador()
 }
 add_action('add_meta_boxes', 'shorturl_exibe_itens_encurtador');
 
-function shorturl_exibe_info($post)
-{
-  //print_r($post);
-  $curl = curl_init();
-
-  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($curl, CURLOPT_URL, 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/list');
-
-  $response = curl_exec($curl);
-  $data = json_decode($response, true);
-  //var_dump($data);
-  echo '<pre>';
-  print_r($data);
-  echo '</pre>';
-  curl_close($curl);
-
-
-  $clicks_counter = get_post_meta($post->ID, 'clicks_counter', true);
-  if ($clicks_counter == '') {
-    $clicks_counter = 0;
-  }
-  echo '<p>Quantidade de clicks: ' . $clicks_counter . '</p>';
-
+function shorturl_exibe_info($post) {
   $data = get_permalink($post->ID);
+  // 
+  // var_dump();
+
+  /**
+   * @TODO - Alterar a url do worker para uma variável de ambiente.
+   */
+  $response = wp_remote_post( 'https://url-shortener-wordpress-sensia.algazigiotti.workers.dev/api/findUnique', array(
+    'method' => 'POST',
+    'httpversion' => '1.0',
+    'headers' =>  array(
+      'content-type' => 'application/json'
+    ),
+    'body' => wp_json_encode(
+      array(
+        'registerKey' => get_field('custom_url', $post->ID) // Path do post do qual as informações serão recuperadas.
+      )
+    ),
+    'cookies' => array()
+  ) );
+
+  $kvData = json_decode(wp_remote_retrieve_body($response));
 
   echo '<img src="' . (new QRCode)->render($data) . '" alt="QR Code" width="400px" />';
 
-  $referrers = get_post_meta($post->ID, 'referrer');
-  $unique = [];
-  //print_r($referrers);
-
-  foreach ($referrers as $referrer) {
-    if (!isset($unique[$referrer])) {
-      $unique[$referrer] = 1;
-    } else {
-      $unique[$referrer] = $unique[$referrer] + 1;
-    }
-  }
   echo '<table class="wp-list-table widefat fixed striped table-view-list posts">';
   echo '<tr class="wp-list-table"><th>Referrer</th><th>Quantidade de clicks</th></tr>';
-  foreach ($unique as $key => $value) {
-    echo '<tr><td>' . esc_url($key) . '</td><td>' . $value . '</td></tr>';
+  if(isset($kvData)) {
+    foreach($kvData->clicks as $referer => $clicks) {
+      echo '<tr><td>' . esc_url($referer) . '</td><td>' . $clicks . '</td></tr>';
+    }
   }
   echo '</table>';
 }
