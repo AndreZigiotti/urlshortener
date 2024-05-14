@@ -186,43 +186,41 @@ function shorturl_redirect($template)
 //   }
 // }
 
-function send_to_worker($post_id)
-{
-  $curl = curl_init();
-
+function send_to_worker($post_id) {
   $dadosJS = [
-    'expirationTime' => '',
+    'activation' => get_field('data_inicial', $post_id),
+    'expiration' => get_field('data_final', $post_id),
     'requirePassword' => false,
     'password' => '',
     'shortUrlLength' => 8,
     'longUrl' => get_field('url_destino', $post_id),
     'shortUrl' => get_field('custom_url', $post_id),
-    //clicks: 0,
   ];
 
-  curl_setopt_array($curl, array(
-    CURLOPT_URL => 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/shorten',
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_ENCODING => '',
-    CURLOPT_MAXREDIRS => 10,
-    CURLOPT_TIMEOUT => 0,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST => 'PUT',
-    CURLOPT_POSTFIELDS => json_encode($dadosJS),
-    CURLOPT_HEADER => true,
-    CURLOPT_HTTPHEADER => array(
-      'X-Auth-Email: gabriel@ingagedigital.com.br',
-      'X-Auth-Key: e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
-      'Content-Type: text/plain',
-      'Authorization: Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
-    ),
-  ));
+  /**
+   * @TODO - Alterar a url do worker para uma variável de ambiente.
+   */
+  $response = wp_remote_post("https://url-shortener-wordpress-sensia.algazigiotti.workers.dev/api/shorten", [
+    'body' => json_encode($dadosJS),
+    'headers' => [
+      'Content-Type' => 'application/json',
+      'X-Auth-Email' => 'gabriel@ingagedigital.com.br',
+      'X-Auth-Key' => 'e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
+      'Authorization' => 'Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
+    ]
+  ]);
 
-  $response = curl_exec($curl);
+  if (is_wp_error($response)) {
+    error_log('Failed to send data to Cloudflare Worker: ' . $response->get_error_message());
+  }
 
-  curl_close($curl);
-  error_log($response);
+  /**
+   * Caso o usuário não tenha fornicedo uma url personalizada, então será gerada uma chave aleatória no JS. Para não perdermos a referência a essa chave, pois usaremos ela nas consultas, então salvamos no post a custom_url que foi gerada no JS.
+   */
+  $responseBody = json_decode(wp_remote_retrieve_body($response));
+  if($responseBody->shortUrl) {
+    update_post_meta($post_id, 'custom_url', $responseBody->shortUrl);
+  }
 }
 
 add_action('acf/save_post', 'send_to_worker', 20); // Utiliza uma prioridade para garantir que seja executado após os dados serem salvos pelo ACF.
