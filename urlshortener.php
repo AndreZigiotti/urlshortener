@@ -76,7 +76,7 @@ function shorturl_exibe_info($post) {
   /**
    * @TODO - Alterar a url do worker para uma variável de ambiente.
    */
-  $response = wp_remote_post( 'https://url-shortener-wordpress-sensia.algazigiotti.workers.dev/api/findUnique', array(
+  $response = wp_remote_post( 'https://url-shortener-wordpress-sensia.ingage.workers.dev/api/findUnique', array(
     'method' => 'POST',
     'httpversion' => '1.0',
     'headers' =>  array(
@@ -188,7 +188,7 @@ function send_to_worker($post_id) {
   /**
    * @TODO - Alterar a url do worker para uma variável de ambiente.
    */
-  $response = wp_remote_post("https://url-shortener-wordpress-sensia.algazigiotti.workers.dev/api/shorten", [
+  $response = wp_remote_post("https://url-shortener-wordpress-sensia.ingage.workers.dev/api/shorten", [
     'body' => json_encode($dadosJS),
     'headers' => [
       'Content-Type' => 'application/json',
@@ -212,3 +212,31 @@ function send_to_worker($post_id) {
 }
 
 add_action('acf/save_post', 'send_to_worker', 20); // Utiliza uma prioridade para garantir que seja executado após os dados serem salvos pelo ACF.
+
+/**
+ * Função para deletar o registro do KV quando o posto for excluído permanentemente.
+ */
+add_action( 'before_delete_post', 'delete_from_kv', 10 );
+function delete_from_kv($post_id) {
+  $shortUrl = get_field('custom_url', $post_id);
+
+  if(isset($shortUrl) && !empty($shortUrl)) {
+    $dadosJS = [
+      'shortUrl' => get_field('custom_url', $post_id),
+    ];
+  
+    $response = wp_remote_post("https://url-shortener-wordpress-sensia.ingage.workers.dev/api/del", [
+      'body' => json_encode($dadosJS),
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'X-Auth-Email' => 'gabriel@ingagedigital.com.br',
+        'X-Auth-Key' => 'e9c70beb39f152ad6dafd2ced69ae6d7d69f9',
+        'Authorization' => 'Bearer ryhg6WZHvZFqUKCcPKZVsDpZyTmu_vEFhTDz54Ry',
+      ]
+    ]);
+  
+    if (is_wp_error($response)) {
+      error_log('Failed to send data to Cloudflare Worker: ' . $response->get_error_message());
+    }
+  }
+}
